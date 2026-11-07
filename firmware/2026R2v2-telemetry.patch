@@ -1,0 +1,67 @@
+--- a/src/2026R2v2/src/main.c
++++ b/src/2026R2v2/src/main.c
+@@ -10,6 +10,7 @@
+ #include <zephyr/drivers/motor.h>
+ #include <zephyr/drivers/sbus.h>
+ #include <zephyr/drivers/chassis.h>
++#include <zephyr/drivers/wheel.h>
+ #include <ares/board/init.h>
+ #include <ares/interface/usb/usb_bulk.h>
+ #include <ares/protocol/dual/dual_protocol.h>
+@@ -127,6 +128,37 @@
+ 	}
+ 
+ 	return 0;
++}
++
++/* Optional prerobot telemetry: 60-byte float payload, sensor acquisition uptime. */
++static float prerobot_telem[15];
++static sync_table_t *prerobot_tx;
++static uint32_t prerobot_seq;
++
++static void prerobot_sample(void)
++{
++	const struct device *const wheels[] = {
++		DEVICE_DT_GET(DT_NODELABEL(steerwheel1)),
++		DEVICE_DT_GET(DT_NODELABEL(steerwheel2)),
++		DEVICE_DT_GET(DT_NODELABEL(steerwheel3)),
++		DEVICE_DT_GET(DT_NODELABEL(steerwheel4)),
++	};
++	uint64_t us = k_ticks_to_us_floor64(k_uptime_ticks());
++	const chassis_data_t *data = chassis->data;
++	const chassis_cfg_t *cfg = chassis->config;
++	prerobot_telem[0] = (float)(prerobot_seq++ & 0xffffffU);
++	prerobot_telem[1] = (float)(us / 1000000U);
++	prerobot_telem[2] = (float)(us % 1000000U);
++	/* These are execution SETPOINTS in the driver's internal axes, not measured velocity. */
++	prerobot_telem[3] = data->set_status.speedX;
++	prerobot_telem[4] = data->set_status.speedY;
++	prerobot_telem[5] = data->set_status.gyro;
++	for (int i = 0; i < 4; ++i) {
++		wheel_status_t *s = wheel_get_speed(wheels[i]);
++		prerobot_telem[6 + i] = s ? s->speed : NAN;
++		prerobot_telem[10 + i] = s ? s->angle : NAN;
++	}
++	prerobot_telem[14] = cfg->max_lin_accel;
+ }
+ 
+ static void clear_chassis_cmd(void)
+@@ -747,7 +779,8 @@
+ 	height_rx = dual_sync_add(&dual_protocol, 0x0112, height_cmd_buf, sizeof(height_cmd_buf),
+ 				    (dual_trans_cb_t)height_cmd_rx_cb);
+ 	angle_tx = dual_sync_add(&dual_protocol, 0x0121, anglebuf, 48, NULL);
+-	if (chassis_rx == NULL || height_rx == NULL || angle_tx == NULL) {
++	prerobot_tx = dual_sync_add(&dual_protocol, 0x0131, prerobot_telem, sizeof(prerobot_telem), NULL);
++	if (chassis_rx == NULL || height_rx == NULL || angle_tx == NULL || prerobot_tx == NULL) {
+ 		LOG_ERR("failed to register dual sync packs");
+ 		return -ENOMEM;
+ 	}
+@@ -786,6 +819,8 @@
+ 		angle_tx_due = !angle_tx_due;
+ 
+ 		if (angle_tx_due) {
++			prerobot_sample();
++			(void)dual_sync_flush(&dual_protocol, prerobot_tx);
+ 			int ret = dual_sync_flush(&dual_protocol, angle_tx);
+ 			if (ret == -EUNATCH) {
+ 				uint32_t now = k_uptime_get_32();

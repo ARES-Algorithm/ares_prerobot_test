@@ -1,0 +1,29 @@
+test_runner:
+  ros__parameters:
+    mode: mock
+    kind: jerk
+    speed: 0.5
+    acceleration: 1.0
+    jerk: 2.0
+    hold: 2.0
+    rate: 100.0
+    direction_deg: 0.0
+    command_yaw_deg: 0.0
+    command_x_sign: 1.0
+    command_y_sign: 1.0
+    pose_topic: /transformed/pose
+    imu_topic: /imu/data
+    pose_frame: map
+    feedback_timeout: 0.15
+    max_duration: 15.0
+    max_distance: 5.0
+    prealign_speed: 0.03
+    prealign_duration: 1.0
+    stop_duration: 1.0
+    stop_deceleration: 1.0
+    output: results
+    firmware_profile: unconfirmed
+    firmware_accel_limit: 15.0
+    firmware_revision: unconfirmed
+    calibration_confirmed: false
+    notes: ''
