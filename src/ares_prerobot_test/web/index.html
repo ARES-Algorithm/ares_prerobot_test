@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ARES · 底盘控制</title>
+  <link rel="stylesheet" href="/app.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">A</span><span>ARES <small>底盘控制台</small></span></div>
+      <div id="connection" class="connection">正在连接</div>
+    </header>
+
+    <div class="layout">
+      <section class="panel control-panel" aria-labelledby="control-title">
+        <div class="panel-head"><div><p class="eyebrow">CONTROL</p><h2 id="control-title">运动指令</h2></div><span id="owner" class="pill">未取得控制权</span></div>
+        <form id="command-form">
+          <div class="fields">
+            <label>Vx <span>m/s</span><input name="vx" type="number" step="any" value="0.3" required></label>
+            <label>Vy <span>m/s</span><input name="vy" type="number" step="any" value="0" required></label>
+            <label>Wz <span>rad/s</span><input name="wz" type="number" step="any" value="0" required></label>
+            <label>Amax <span>m/s²</span><input name="amax" type="number" step="any" min="0.001" value="1" required></label>
+            <label>Jerkmax <span>m/s³</span><input name="jerkmax" type="number" step="any" min="0.001" value="2" required></label>
+          </div>
+          <div class="actions"><button id="claim" type="button" class="secondary">取得控制权</button><button id="send" type="submit" class="primary" disabled>发送目标</button></div>
+        </form>
+        <div class="stop-actions"><button id="stop" type="button" disabled>受限减速</button><button id="halt" type="button" class="danger" disabled>立即零目标</button><button id="release" type="button" disabled>释放控制</button></div>
+        <p id="notice" class="notice" role="status" aria-live="polite">启动待命，不发送速度帧。</p>
+      </section>
+
+      <aside class="status-stack">
+        <section class="panel" aria-labelledby="state-title"><div class="panel-head"><div><p class="eyebrow">LIVE STATUS</p><h2 id="state-title">链路状态</h2></div></div>
+          <div class="state-row"><span>USB 桥</span><strong id="usb-state">未知</strong></div>
+          <div class="state-row"><span>发送状态</span><strong id="tx-state">待命</strong></div>
+          <div class="state-row"><span>控制模式</span><strong id="mode-state">—</strong></div>
+        </section>
+        <section class="panel" aria-labelledby="velocity-title"><div class="panel-head"><div><p class="eyebrow">VELOCITY</p><h2 id="velocity-title">速度向量</h2></div></div>
+          <div class="vector"><span>目标</span><code id="target-vector">0.000 · 0.000 · 0.000</code></div>
+          <div class="vector"><span>生成</span><code id="command-vector">0.000 · 0.000 · 0.000</code></div>
+          <div class="vector"><span>最近发送</span><code id="sent-vector">0.000 · 0.000 · 0.000</code></div>
+          <p class="caption">顺序：Vx · Vy · Wz。断联后“最近发送”保留最后一帧数值，不表示仍在发送。</p>
+        </section>
+      </aside>
+    </div>
+    <section class="panel events-panel" aria-labelledby="events-title"><div class="panel-head"><div><p class="eyebrow">EVENTS</p><h2 id="events-title">最近事件</h2></div></div><ol id="events"></ol></section>
+    <footer>ARES · 本地控制界面 · 失联时停止发送，不自动发送零速度</footer>
+  </main>
+</body>
+</html>

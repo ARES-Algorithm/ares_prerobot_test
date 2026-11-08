@@ -79,6 +79,7 @@ public:
     void disconnect();
     // 检查连接状态
     bool is_connected() const;
+    void set_heartbeat_enabled(bool enabled) { heartbeat_enabled_ = enabled; }
 
     // 注册同步帧回调
     void register_sync_callback(SyncCallback cb);
@@ -119,6 +120,7 @@ private:
     libusb_device_handle* dev_handle_ = nullptr;
     std::thread read_thread_;
     std::thread heartbeat_thread_;
+    std::atomic<bool> heartbeat_enabled_{true};
     std::atomic<bool> running_{false}; // 控制线程运行状态
     std::atomic<bool> stop_{false}; // 停止 USB 读取线程
 
