@@ -25,7 +25,6 @@ class Controller(Node):
         super().__init__('chassis_controller')
         self.declare_parameter('http_host', '127.0.0.1')
         self.declare_parameter('http_port', 8766)
-        self.declare_parameter('read_only', False)
         self.declare_parameter('angular_accel', 2.0)
         self.declare_parameter('angular_jerk', 8.0)
         self.declare_parameter('lease_seconds', 1.5)
@@ -36,7 +35,6 @@ class Controller(Node):
         self.declare_parameter('wheel_radius', 0.04)
         self.declare_parameter('wheel_rpm_ratio', 1.0)
         self.lease_seconds = float(self.get_parameter('lease_seconds').value)
-        self.read_only = bool(self.get_parameter('read_only').value)
         self.limits = {
             'speed': float(self.get_parameter('max_linear_speed').value),
             'wz': float(self.get_parameter('max_angular_speed').value),
@@ -97,9 +95,6 @@ class Controller(Node):
             raise ValueError('control lease expired or token invalid')
 
     def request(self, action, data):
-        # Reject every control action before acquiring a lease or changing motion state.
-        if self.read_only:
-            raise ValueError('只读观察模式：控制请求已禁用')
         with self.lock:
             now = time.monotonic()
             if action == 'claim':
@@ -167,7 +162,6 @@ class Controller(Node):
             'mode': self.mode,
             'usb_ready': self.bridge_ready,
             'transmitting': self.active and self.bridge_ready,
-            'read_only': self.read_only,
             'target': self.motion.target[:],
             'command': self.motion.v[:],
             'sent': self.sent[:],
@@ -176,9 +170,6 @@ class Controller(Node):
         }
 
     def tick(self):
-        # Observation mode never publishes a chassis command, including a zero command.
-        if self.read_only:
-            return
         with self.lock:
             now = time.monotonic()
             dt = min(0.05, now - self.last_tick)

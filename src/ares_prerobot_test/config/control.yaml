@@ -2,7 +2,6 @@ chassis_controller:
   ros__parameters:
     http_host: 127.0.0.1
     http_port: 8766
-    read_only: false
     lease_seconds: 1.5
     angular_accel: 100.0
     angular_jerk: 100.0
