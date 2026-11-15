@@ -1,6 +1,6 @@
 (() => {
   const $ = id => document.getElementById(id);
-  const rows = {command: [], wheel: [], current: []};
+  const rows = {command: [], wheel: [], current: [], current_mean: []};
   let cursor = 0, epoch = null, busy = false, wheel = 0, lastReceived = 0;
   const colors = {v:'#1767d2', a:'#df7d18', j:'#8236c9', Is:'#0f9f91', Id:'#d44a78'};
   const finite = x => typeof x === 'number' && Number.isFinite(x);
@@ -21,7 +21,7 @@
       if (!response.ok) throw new Error('遥测接口不可用');
       const data = await response.json();
       if (epoch !== null && epoch !== data.epoch) {
-        rows.wheel = []; rows.current = [];
+        rows.wheel = []; rows.current = []; rows.current_mean = [];
       }
       epoch = data.epoch;
       cursor = data.cursor;
@@ -111,18 +111,21 @@
       ctx.fillStyle='#888d96';ctx.font='11px sans-serif';
       for(let k=0;k<=6;k++) ctx.fillText(`${Math.round(-history+history*k/6)}s`,left+(width-left-right)*k/6-9,height-5);
     }
-    const current=setup($('current-chart'));
-    if (current) {
+    function drawCurrent(canvasId, samples) {
+      const current=setup($(canvasId));
+      if (!current) return;
       const {ctx,width,height}=current;
       ctx.clearRect(0,0,width,height);
       const box={x:49,y:7,w:width-62,h:height-34};
-      const [lo,hi]=bounds(rows.current.map(r=>r.Is),rows.current.map(r=>r.Id));
+      const [lo,hi]=bounds(samples.map(r=>r.Is),samples.map(r=>r.Id));
       axes(ctx,box,lo,hi,'电流 (A)');
-      line(ctx,rows.current,r=>r.Is,box,start,now,lo,hi,colors.Is);
-      line(ctx,rows.current,r=>r.Id,box,start,now,lo,hi,colors.Id);
+      line(ctx,samples,r=>r.Is,box,start,now,lo,hi,colors.Is);
+      line(ctx,samples,r=>r.Id,box,start,now,lo,hi,colors.Id);
       ctx.fillStyle='#888d96';ctx.font='11px sans-serif';
       for(let k=0;k<=6;k++) ctx.fillText(`${Math.round(-history+history*k/6)}s`,box.x+box.w*k/6-9,height-5);
     }
+    drawCurrent('current-chart', rows.current);
+    drawCurrent('current-mean-chart', rows.current_mean);
   }
 
   window.addEventListener('resize',()=>draw());

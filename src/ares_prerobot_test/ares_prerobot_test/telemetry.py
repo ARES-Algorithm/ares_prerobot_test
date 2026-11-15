@@ -159,10 +159,16 @@ class LiveTelemetry:
             times = {r['seq']: r['t'] for r in wheel_rows}
             currents = [dict(id=r['id'], t=times[r['seq']], Is=r['Is'][wheel], Id=r['Id'][wheel])
                         for r in self.currents if r['id'] > since and r['seq'] in times]
+            # Keep each four-motor mean tied to the same firmware sample sequence.
+            current_mean = [dict(id=r['id'], t=times[r['seq']],
+                                 Is=sum(r['Is']) / 4 if all(v is not None for v in r['Is']) else None,
+                                 Id=sum(r['Id']) / 4 if all(v is not None for v in r['Id']) else None)
+                            for r in self.currents if r['id'] > since and r['seq'] in times]
             return dict(now=now, epoch=self.epoch, cursor=self.sequence,
                         sensor_age=None if self.last_sensor is None else now-self.last_sensor,
                         command_age=None if self.last_command is None else now-self.last_command,
                         error=self.error, radius=self.radius, rpm_ratio=self.rpm_ratio,
                         derivative_window=self.window, history=self.history,
                         wheel=[r for r in wheel_rows if r['id'] > since], current=currents,
+                        current_mean=current_mean,
                         command=[r for r in self.commands if r['id'] > since])

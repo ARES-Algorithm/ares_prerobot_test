@@ -14,15 +14,19 @@ def test_wheel_current_pairing_and_derivatives():
         rpm = v * 60 / (2 * math.pi * .04)
         live.command(v, 0, clock[0])
         live.raw(0x0131, [i, sec, usec, rpm, rpm, rpm, rpm, 0, 0, 0, 0])
-        live.raw(0x0141, [i, sec, 2., 2., 2., 2., 1., 1., 1., 1.])
+        live.raw(0x0141, [i, sec, 1., 2., 3., 4., 4., 5., 6., 7.])
     data = live.snapshot(0)
-    assert len(data['wheel']) == len(data['current']) == 20
+    assert len(data['wheel']) == len(data['current']) == len(data['current_mean']) == 20
     assert data['current'][-1]['t'] == data['wheel'][-1]['t']
+    assert data['current_mean'][-1]['t'] == data['wheel'][-1]['t']
     assert data['wheel'][-1]['derived']['j'] == pytest.approx(2., abs=.01)
-    assert data['current'][-1]['Id'] == 2.
-    assert data['current'][-1]['Is'] == 1.
+    assert data['current'][-1]['Id'] == 1.
+    assert data['current'][-1]['Is'] == 4.
+    assert data['current_mean'][-1]['Id'] == 2.5
+    assert data['current_mean'][-1]['Is'] == 5.5
     cursor = data['cursor']
     assert not live.snapshot(0, cursor)['current']
+    assert not live.snapshot(0, cursor)['current_mean']
 
 
 def test_gap_and_wrong_firmware_do_not_create_false_line():
@@ -36,6 +40,15 @@ def test_gap_and_wrong_firmware_do_not_create_false_line():
     assert live.snapshot()['wheel'][-1]['derived'] is None
     live.raw(0x0131, [2, 2, 0, 60, 0, 0, 0, 0, 0, 0, 0])
     assert len(live.snapshot()['wheel']) == 2
+
+
+def test_current_mean_requires_all_four_readings():
+    live = LiveTelemetry(clock=lambda: 10.)
+    live.raw(0x0131, [1, 1, 0, 60, 60, 60, 60, 0, 0, 0, 0])
+    live.raw(0x0141, [1, 1, 1, 2, float('nan'), 4, 5, 6, 7, 8])
+    mean = live.snapshot()['current_mean'][0]
+    assert mean['Id'] is None
+    assert mean['Is'] == 6.5
 
 
 import pytest

@@ -55,8 +55,12 @@
         </section>
         <section class="panel chart-panel" aria-labelledby="current-title">
           <div class="panel-head"><div><p class="eyebrow">LIVE CURRENT</p><h2 id="current-title">电机电流</h2></div><span class="pill">所选轮组</span></div>
+          <h3 class="current-subtitle">所选轮组</h3>
           <div class="plot-wrap current-plot"><canvas id="current-chart" role="img" aria-label="实时 Is 转向电流和 Id 驱动电流曲线"></canvas></div>
           <div class="plot-legend"><span class="legend-is">Is 转向电流 (A)</span><span class="legend-id">Id 驱动电流 (A)</span></div>
+          <h3 class="current-subtitle mean-subtitle">四组电流平均值</h3>
+          <div class="plot-wrap current-plot"><canvas id="current-mean-chart" role="img" aria-label="实时四组转向电流 Is 平均值和四组驱动电流 Id 平均值曲线"></canvas></div>
+          <div class="plot-legend"><span class="legend-is">Is 平均值 (A)</span><span class="legend-id">Id 平均值 (A)</span></div>
           <p class="caption">电流来自下位机 0x0141 遥测；现有 VESC 负电流换算尚待校准。</p>
         </section>
       </div>
