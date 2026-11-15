@@ -97,6 +97,7 @@ class Controller(Node):
             raise ValueError('control lease expired or token invalid')
 
     def request(self, action, data):
+        # Reject every control action before acquiring a lease or changing motion state.
         if self.read_only:
             raise ValueError('只读观察模式：控制请求已禁用')
         with self.lock:
@@ -175,6 +176,7 @@ class Controller(Node):
         }
 
     def tick(self):
+        # Observation mode never publishes a chassis command, including a zero command.
         if self.read_only:
             return
         with self.lock:
@@ -200,6 +202,7 @@ class Controller(Node):
             message.header.frame_id = 'command'
             message.twist.linear.x, message.twist.linear.y, message.twist.angular.z = self.motion.v
             self.pub.publish(message)
+            # Plot only commands that this controller actually published.
             self.telemetry.command(self.motion.v[0], self.motion.v[1], now)
             if self.mode in ('stopping', 'halting') and self.zero_frames <= 0:
                 self.active = False

@@ -60,7 +60,6 @@ class LiveTelemetry:
         self.epoch = 0
         self.sensor_origin = None
         self.error = None
-        self.latest_command = None
 
     @staticmethod
     def finite(values):
@@ -84,7 +83,7 @@ class LiveTelemetry:
         now = self.clock()
         with self.lock:
             if data_id == 0x0131:
-                # chassis_speed_test format, deliberately NOT the old 15-float patch.
+                # chassis_speed_test: seq, uptime(sec/usec), 4 motor RPM, 4 reserved floats.
                 if len(values) != 11:
                     self.error = '转速遥测格式不匹配：需要 chassis_speed_test 的 11 float 包'
                     return
@@ -115,12 +114,14 @@ class LiveTelemetry:
                 self.error = None
                 for i, rpm in enumerate(values[3:7]):
                     self.sequence += 1
+                    # Convert motor RPM to wheel-rim speed; the sign is irrelevant to speed magnitude.
                     v = abs(float(rpm)) * 2 * math.pi * self.radius / (60 * self.rpm_ratio)
                     derived = self.fit[i].add(stamp, v)
                     self.wheels[i].append(dict(id=self.sequence, received=now, t=stamp,
                                                seq=int(seq), rpm=float(rpm) if math.isfinite(rpm) else None,
                                                v=v if math.isfinite(v) else None, derived=derived))
             elif data_id == 0x0141:
+                # seq, reserved float, 4 drive currents (Id), 4 axial currents (Is).
                 if len(values) != 10 or not self.finite(values[:2]):
                     return
                 seq = values[0]
@@ -154,7 +155,7 @@ class LiveTelemetry:
             now = self.clock()
             self.trim(now)
             wheel_rows = list(self.wheels[wheel])
-            # Pair current packets to RPM packets by sampling sequence, not arrival time.
+            # Both packets share a sample sequence; use the RPM timestamp for aligned plots.
             times = {r['seq']: r['t'] for r in wheel_rows}
             currents = [dict(id=r['id'], t=times[r['seq']], Is=r['Is'][wheel], Id=r['Id'][wheel])
                         for r in self.currents if r['id'] > since and r['seq'] in times]
