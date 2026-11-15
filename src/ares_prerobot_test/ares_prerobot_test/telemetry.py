@@ -83,7 +83,7 @@ class LiveTelemetry:
         now = self.clock()
         with self.lock:
             if data_id == 0x0131:
-                # chassis_speed_test: seq, uptime(sec/usec), 4 motor RPM, 4 reserved floats.
+                # chassis_speed_test: seq, uptime(sec/usec), 4 drive RPM, 4 steering RPM.
                 if len(values) != 11:
                     self.error = '转速遥测格式不匹配：需要 chassis_speed_test 的 11 float 包'
                     return
@@ -121,7 +121,7 @@ class LiveTelemetry:
                                                seq=int(seq), rpm=float(rpm) if math.isfinite(rpm) else None,
                                                v=v if math.isfinite(v) else None, derived=derived))
             elif data_id == 0x0141:
-                # seq, reserved float, 4 drive currents (Id), 4 axial currents (Is).
+                # seq, uptime seconds, 4 drive currents (Id), 4 steering currents (Is).
                 if len(values) != 10 or not self.finite(values[:2]):
                     return
                 seq = values[0]
