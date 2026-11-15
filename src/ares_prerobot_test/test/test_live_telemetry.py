@@ -1,0 +1,41 @@
+import math
+
+from ares_prerobot_test.telemetry import LiveTelemetry
+
+
+def test_wheel_current_pairing_and_derivatives():
+    clock = [100.]
+    live = LiveTelemetry(clock=lambda: clock[0])
+    for i in range(20):
+        clock[0] = 100. + i * .02
+        sec, usec = divmod(i * 20000, 1000000)
+        # v(t) = t²; RPM is measured motor speed before conversion.
+        v = (i * .02) ** 2
+        rpm = v * 60 / (2 * math.pi * .04)
+        live.command(v, 0, clock[0])
+        live.raw(0x0131, [i, sec, usec, rpm, rpm, rpm, rpm, 0, 0, 0, 0])
+        live.raw(0x0141, [i, sec, 2., 2., 2., 2., 1., 1., 1., 1.])
+    data = live.snapshot(0)
+    assert len(data['wheel']) == len(data['current']) == 20
+    assert data['current'][-1]['t'] == data['wheel'][-1]['t']
+    assert data['wheel'][-1]['derived']['j'] == pytest.approx(2., abs=.01)
+    assert data['current'][-1]['Id'] == 2.
+    assert data['current'][-1]['Is'] == 1.
+    cursor = data['cursor']
+    assert not live.snapshot(0, cursor)['current']
+
+
+def test_gap_and_wrong_firmware_do_not_create_false_line():
+    clock = [10.]
+    live = LiveTelemetry(clock=lambda: clock[0])
+    live.raw(0x0131, [0.] * 15)
+    assert '格式不匹配' in live.snapshot()['error']
+    live.raw(0x0131, [1, 1, 0, 60, 0, 0, 0, 0, 0, 0, 0])
+    clock[0] = 11.
+    live.raw(0x0131, [2, 2, 0, 60, 0, 0, 0, 0, 0, 0, 0])
+    assert live.snapshot()['wheel'][-1]['derived'] is None
+    live.raw(0x0131, [2, 2, 0, 60, 0, 0, 0, 0, 0, 0, 0])
+    assert len(live.snapshot()['wheel']) == 2
+
+
+import pytest
