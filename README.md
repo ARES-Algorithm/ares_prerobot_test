@@ -2,17 +2,17 @@
 
 ## 实时图表（开发分支）
 
-`live_charts` 在本机 `127.0.0.1:8767` 提供左侧控制、右侧实时曲线页面。控制按钮代理到原有 `8766` 控制服务；图表订阅 `/prerobot/cmd_vel` 和 `/prerobot/usb_rx`，不会自己生成速度指令。原控制服务和 ROS 2 节点须已运行。
+在现有 `chassis_controller` 的 `127.0.0.1:8766` 页面直接显示实时曲线。控制器生成的速度指令和 `/prerobot/usb_rx` 电机遥测进入同一 30 秒缓冲区，页面每 100 ms 读取增量数据。
 
 ```bash
 ./scripts/build.sh
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
-ros2 run ares_prerobot_test live_charts --control-url http://127.0.0.1:8766
-# 浏览器打开 http://127.0.0.1:8767/
+ros2 launch ares_prerobot_test control.launch.py
+# 浏览器打开 http://127.0.0.1:8766/
 ```
 
-远端机器人运行时，可另建 SSH 转发 `ssh -L 8767:127.0.0.1:8767 ares@<机器人地址>`，再在本机打开同一地址。轮半径默认 0.04 m，传动比默认 1；若实车参数不同，用 `--radius` 和 `--rpm-ratio` 调整。`--command-topic` / `--raw-topic` 可适配现有控制节点的话题名。
+远端机器人运行时，沿用现有的 `8766` SSH 转发。轮半径默认 0.04 m，传动比默认 1；若实车参数不同，修改 `config/control.yaml` 的 `wheel_radius` 和 `wheel_rpm_ratio`。
 
 上图一张画布含 v、a、j 三个量程，每个量程两条线：上位机输出实线、驱动轮测量虚线。实测 v 是所选驱动轮转速换算的轮缘速度模，a、j 用 0.24 秒因果拟合窗口计算，因而导数曲线比实时采样慢约半个窗口。下图是同一轮组的 Is 转向电流和 Id 驱动电流。页面每 100 ms 拉取增量数据，仅保留最近 30 秒。数据来自 `chassis_speed_test` 固件的 11 float `0x0131` 和 10 float `0x0141`；仓库内旧的 15 float 遥测补丁格式不会被误读。
 
