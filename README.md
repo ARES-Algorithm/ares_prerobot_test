@@ -18,6 +18,14 @@ ros2 launch ares_prerobot_test control.launch.py
 
 当前 VESC 负电流换算仍待固件驱动修正。轮缘速度可能因打滑偏离车辆地速；测地面极限速度应以外部定位为准。
 
+先静态核对页面和空载遥测时，可单独启动只读实例：
+
+```bash
+ros2 run ares_prerobot_test chassis_controller --ros-args -p http_port:=8767 -p read_only:=true
+```
+
+只读实例的 `tick()` 不发布速度指令，HTTP API 拒绝全部控制请求，页面控制按钮禁用；其曲线仍订阅 USB 遥测。若原控制节点在运行，它不受此只读实例影响。
+
 ROS2 Jazzy 底盘实测工作区。包含 C++ USB 桥接、Python 单次实验状态机、CSV 原始采集、rosbag 录制和离线分析。默认运行模拟底盘，启动 launch 后调用服务才开始实验。
 
 ## 构建与首次运行

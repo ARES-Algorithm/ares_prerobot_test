@@ -33,7 +33,7 @@ async function refresh() {
     if (!response.ok) throw new Error('状态读取失败');
     const state = await response.json();
     online = true;
-    $('connection').textContent = '控制服务已连接';
+    $('connection').textContent = state.read_only ? '只读观察模式' : '控制服务已连接';
     $('connection').className = 'connection online';
     if (token && !state.owner) { token = null; notice('控制权已失效，发送已停止。', true); }
     $('owner').textContent = state.owner ? `控制端：${state.owner}` : '未取得控制权';
@@ -50,8 +50,9 @@ async function refresh() {
       const text = document.createElement('span'); text.textContent = event.text;
       item.append(when, text); return item;
     }));
-    $('claim').disabled = Boolean(state.owner);
-    for (const id of ['send','stop','halt','release']) $(id).disabled = !token;
+    $('claim').disabled = Boolean(state.owner) || Boolean(state.read_only);
+    for (const id of ['send','stop','halt','release']) $(id).disabled = !token || Boolean(state.read_only);
+    if (state.read_only) notice('只读观察模式：不会发送运动指令。');
   } catch (error) {
     online = false;
     $('connection').textContent = '控制服务失联';
