@@ -20,11 +20,11 @@
         <div class="panel-head"><div><p class="eyebrow">CONTROL</p><h2 id="control-title">运动指令</h2></div><span id="owner" class="pill">未取得控制权</span></div>
         <form id="command-form">
           <div class="fields">
-            <label>Vx <span>m/s</span><input name="vx" type="number" step="any" value="0.3" required></label>
+            <label>Vx <span>m/s</span><input name="vx" type="number" step="any" value="0.1" required></label>
             <label>Vy <span>m/s</span><input name="vy" type="number" step="any" value="0" required></label>
             <label>Wz <span>rad/s</span><input name="wz" type="number" step="any" value="0" required></label>
-            <label>Amax <span>m/s²</span><input name="amax" type="number" step="any" min="0.001" value="1" required></label>
-            <label>Jerkmax <span>m/s³</span><input name="jerkmax" type="number" step="any" min="0.001" value="2" required></label>
+            <label>Amax <span>m/s²</span><input name="amax" type="number" step="any" min="0.001" value="0.3" required></label>
+            <label>Jerkmax <span>m/s³</span><input name="jerkmax" type="number" step="any" min="0.001" value="1" required></label>
           </div>
           <div class="actions"><button id="claim" type="button" class="secondary">取得控制权</button><button id="send" type="submit" class="primary" disabled>发送目标</button></div>
         </form>

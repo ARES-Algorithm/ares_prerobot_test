@@ -156,14 +156,18 @@ class LiveTelemetry:
             self.trim(now)
             wheel_rows = list(self.wheels[wheel])
             # Both packets share a sample sequence; use the RPM timestamp for aligned plots.
-            times = {r['seq']: r['t'] for r in wheel_rows}
-            currents = [dict(id=r['id'], t=times[r['seq']], Is=r['Is'][wheel], Id=r['Id'][wheel])
-                        for r in self.currents if r['id'] > since and r['seq'] in times]
+            wheel_samples = {r['seq']: r for r in wheel_rows}
+            # A current packet may arrive before its RPM partner. Expose it under
+            # the later ID so an intervening poll cannot skip the completed pair.
+            paired = [(r, wheel_samples[r['seq']]) for r in self.currents if r['seq'] in wheel_samples]
+            paired = [(r, w) for r, w in paired if max(r['id'], w['id']) > since]
+            currents = [dict(id=max(r['id'], w['id']), t=w['t'], Is=r['Is'][wheel], Id=r['Id'][wheel])
+                        for r, w in paired]
             # Keep each four-motor mean tied to the same firmware sample sequence.
-            current_mean = [dict(id=r['id'], t=times[r['seq']],
+            current_mean = [dict(id=max(r['id'], w['id']), t=w['t'],
                                  Is=sum(r['Is']) / 4 if all(v is not None for v in r['Is']) else None,
                                  Id=sum(r['Id']) / 4 if all(v is not None for v in r['Id']) else None)
-                            for r in self.currents if r['id'] > since and r['seq'] in times]
+                            for r, w in paired]
             return dict(now=now, epoch=self.epoch, cursor=self.sequence,
                         sensor_age=None if self.last_sensor is None else now-self.last_sensor,
                         command_age=None if self.last_command is None else now-self.last_command,

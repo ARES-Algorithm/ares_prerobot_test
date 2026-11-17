@@ -68,13 +68,16 @@
   function line(ctx, points, getY, box, start, end, lo, hi, color, dashed=false) {
     ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
     ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.setLineDash(dashed?[5,4]:[]);
-    let started=false;
+    let started=false, previousTime=null;
     for (const p of points) {
       const y=getY(p), t=p.t;
-      if (!finite(y) || !finite(t) || t<start || t>end) {started=false;continue;}
+      if (!finite(y) || !finite(t) || t<start || t>end) {started=false;previousTime=null;continue;}
       const x=box.x+(t-start)/(end-start)*box.w;
       const py=box.y+box.h-(y-lo)/(hi-lo)*box.h;
+      // Break the line across missing samples instead of inventing a smooth transition.
+      if (previousTime !== null && t-previousTime > .15) started=false;
       if (!started) {ctx.moveTo(x,py);started=true;} else ctx.lineTo(x,py);
+      previousTime=t;
     }
     ctx.stroke();ctx.restore();
   }

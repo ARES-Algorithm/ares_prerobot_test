@@ -51,4 +51,16 @@ def test_current_mean_requires_all_four_readings():
     assert mean['Is'] == 6.5
 
 
+def test_current_arriving_before_rpm_survives_incremental_poll():
+    live = LiveTelemetry(clock=lambda: 10.)
+    live.raw(0x0141, [1, 1, 1, 2, 3, 4, 5, 6, 7, 8])
+    cursor = live.snapshot()['cursor']
+    assert live.snapshot()['current'] == []
+    live.raw(0x0131, [1, 1, 0, 60, 60, 60, 60, 0, 0, 0, 0])
+    data = live.snapshot(since=cursor)
+    assert len(data['current']) == len(data['current_mean']) == 1
+    assert data['current_mean'][0]['Id'] == 2.5
+    assert live.snapshot(since=data['cursor'])['current'] == []
+
+
 import pytest

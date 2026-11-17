@@ -3,12 +3,12 @@ chassis_controller:
     http_host: 127.0.0.1
     http_port: 8766
     lease_seconds: 1.5
-    angular_accel: 100.0
-    angular_jerk: 100.0
-    max_linear_speed: 100.0
-    max_angular_speed: 100.0
-    max_linear_accel: 1000.0
-    max_linear_jerk: 2000.0
+    angular_accel: 0.5
+    angular_jerk: 2.0
+    max_linear_speed: 0.2
+    max_angular_speed: 0.3
+    max_linear_accel: 0.5
+    max_linear_jerk: 2.0
     wheel_radius: 0.04
     wheel_rpm_ratio: 1.0
 

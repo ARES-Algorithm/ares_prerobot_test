@@ -25,13 +25,13 @@ class Controller(Node):
         super().__init__('chassis_controller')
         self.declare_parameter('http_host', '127.0.0.1')
         self.declare_parameter('http_port', 8766)
-        self.declare_parameter('angular_accel', 2.0)
-        self.declare_parameter('angular_jerk', 8.0)
+        self.declare_parameter('angular_accel', 0.5)
+        self.declare_parameter('angular_jerk', 2.0)
         self.declare_parameter('lease_seconds', 1.5)
-        self.declare_parameter('max_linear_speed', 2.0)
-        self.declare_parameter('max_angular_speed', 2.0)
-        self.declare_parameter('max_linear_accel', 4.0)
-        self.declare_parameter('max_linear_jerk', 20.0)
+        self.declare_parameter('max_linear_speed', 0.2)
+        self.declare_parameter('max_angular_speed', 0.3)
+        self.declare_parameter('max_linear_accel', 0.5)
+        self.declare_parameter('max_linear_jerk', 2.0)
         self.declare_parameter('wheel_radius', 0.04)
         self.declare_parameter('wheel_rpm_ratio', 1.0)
         self.lease_seconds = float(self.get_parameter('lease_seconds').value)
@@ -41,6 +41,10 @@ class Controller(Node):
             'amax': float(self.get_parameter('max_linear_accel').value),
             'jerkmax': float(self.get_parameter('max_linear_jerk').value),
         }
+        if not math.isfinite(self.lease_seconds) or self.lease_seconds <= 0:
+            raise ValueError('lease_seconds must be positive and finite')
+        if any(not math.isfinite(value) or value <= 0 for value in self.limits.values()):
+            raise ValueError('control limits must be positive and finite')
         self.motion = Motion(
             float(self.get_parameter('angular_accel').value),
             float(self.get_parameter('angular_jerk').value))
@@ -55,6 +59,7 @@ class Controller(Node):
         self.active = False
         self.zero_frames = 0
         self.bridge_ready = False
+        self.bridge_seen_at = None
         self.sent = [0.0, 0.0, 0.0]
         self.events = deque(maxlen=20)
         self.last_tick = time.monotonic()
@@ -81,6 +86,10 @@ class Controller(Node):
                 self.mode = 'usb_lost'
                 self.event('USB lost; command transmission stopped')
             self.bridge_ready = message.data
+            self.bridge_seen_at = time.monotonic()
+
+    def bridge_is_ready(self, now):
+        return self.bridge_ready and self.bridge_seen_at is not None and now - self.bridge_seen_at < 0.2
 
     def on_sent(self, message):
         with self.lock:
@@ -120,7 +129,7 @@ class Controller(Node):
                     raise ValueError('target speed exceeds configured limit')
                 if not 0 < amax <= self.limits['amax'] or not 0 < jerkmax <= self.limits['jerkmax']:
                     raise ValueError('amax or jerkmax outside configured limit')
-                if not self.bridge_ready:
+                if not self.bridge_is_ready(now):
                     raise ValueError('USB bridge not ready')
                 self.motion.set_target(*values)
                 self.active = True
@@ -129,18 +138,18 @@ class Controller(Node):
                 self.lease_until = now + self.lease_seconds
                 self.event(f'target {vx:.3f} {vy:.3f} {wz:.3f}')
             elif action == 'stop':
-                if not self.bridge_ready:
+                if not self.bridge_is_ready(now):
                     raise ValueError('USB bridge not ready')
                 self.motion.set_target(0.0, 0.0, 0.0, self.motion.amax, self.motion.jerkmax)
-                self.active = self.bridge_ready
+                self.active = True
                 self.zero_frames = 5
                 self.mode = 'stopping'
                 self.event('operator stop')
             elif action == 'halt':
-                if not self.bridge_ready:
+                if not self.bridge_is_ready(now):
                     raise ValueError('USB bridge not ready')
                 self.motion.halt()
-                self.active = self.bridge_ready
+                self.active = True
                 self.zero_frames = 5
                 self.mode = 'halting'
                 self.event('operator halt')
@@ -160,8 +169,8 @@ class Controller(Node):
             'owner': self.owner if now < self.lease_until else None,
             'lease_remaining': max(0.0, self.lease_until - now) if self.owner else 0.0,
             'mode': self.mode,
-            'usb_ready': self.bridge_ready,
-            'transmitting': self.active and self.bridge_ready,
+            'usb_ready': self.bridge_is_ready(now),
+            'transmitting': self.active and self.bridge_is_ready(now),
             'target': self.motion.target[:],
             'command': self.motion.v[:],
             'sent': self.sent[:],
@@ -180,7 +189,11 @@ class Controller(Node):
                 self.active = False
                 self.mode = 'control_lost'
                 self.event('control lease lost; transmission stopped')
-            if not self.active or not self.bridge_ready:
+            if self.active and not self.bridge_is_ready(now):
+                self.active = False
+                self.mode = 'usb_lost'
+                self.event('USB bridge status expired; transmission stopped')
+            if not self.active:
                 return
             if self.mode == 'halting':
                 self.zero_frames -= 1
