@@ -410,7 +410,7 @@ void Protocol::heartbeat_loop() {
         heartbeat_frame.error_code = htons(HEARTBEAT_ERROR_CODE); // 转换 error_code
 
         // 发送心跳帧 (usb_write 内部有锁保护)
-        if (is_connected()) { // 检查连接状态再发送
+        if (is_connected() && heartbeat_enabled_) { // 检查连接状态再发送
              if (!usb_write(reinterpret_cast<uint8_t*>(&heartbeat_frame), sizeof(heartbeat_frame))) {
                  std::cerr << "Failed to send heartbeat frame." << std::endl;
                  // 可以选择在这里处理发送失败，例如尝试重连或停止心跳

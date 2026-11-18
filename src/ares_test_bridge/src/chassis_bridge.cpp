@@ -41,16 +41,23 @@ class Bridge : public rclcpp::Node {
       });
     timer_=create_wall_timer(10ms,[this]{tick();});
   }
-  ~Bridge() override { std::array<float,4> z{}; protocol_.send_sync(0x1101,reinterpret_cast<uint8_t*>(z.data()),count_*4); protocol_.disconnect(); }
+  ~Bridge() override { protocol_.set_heartbeat_enabled(false); protocol_.disconnect(); }
  private:
   void tick(){
-    auto command=cmd_;
-    if(std::chrono::duration<double>(std::chrono::steady_clock::now()-last_).count()>timeout_) command={};
-    if(ready_ && !protocol_.send_sync(0x1101,reinterpret_cast<uint8_t*>(command.data()),count_*4)) {
-      ready_=false; cmd_={}; RCLCPP_ERROR(get_logger(),"USB TX failed; restart bridge before next test");
-    } else if(ready_) {
-      geometry_msgs::msg::TwistStamped m; m.header.stamp=now(); m.header.frame_id="command";
-      m.twist.linear.x=command[0]; m.twist.linear.y=command[1]; m.twist.angular.z=command[2]; sent_->publish(m);
+    const bool fresh = std::chrono::duration<double>(
+      std::chrono::steady_clock::now()-last_).count() <= timeout_;
+    protocol_.set_heartbeat_enabled(ready_ && fresh);
+    if (ready_ && fresh) {
+      if (!protocol_.send_sync(0x1101,reinterpret_cast<uint8_t*>(cmd_.data()),count_*4)) {
+        ready_=false;
+        protocol_.set_heartbeat_enabled(false);
+        RCLCPP_ERROR(get_logger(),"USB TX failed; restart bridge before next command");
+      } else {
+        geometry_msgs::msg::TwistStamped m;
+        m.header.stamp=now(); m.header.frame_id="command";
+        m.twist.linear.x=cmd_[0]; m.twist.linear.y=cmd_[1]; m.twist.angular.z=cmd_[2];
+        sent_->publish(m);
+      }
     }
     std_msgs::msg::Bool s; s.data=ready_; status_->publish(s);
   }
