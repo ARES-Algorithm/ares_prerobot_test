@@ -30,8 +30,13 @@ class SessionBag:
         self.writer.open(rosbag2_py.StorageOptions(uri=str(self.path), storage_id='sqlite3'),
                          rosbag2_py.ConverterOptions('cdr', 'cdr'))
         for name, msg_type in TOPICS.items():
-            self.writer.create_topic(rosbag2_py.TopicMetadata(
-                id=0, name=name, type=msg_type, serialization_format='cdr'))
+            fields = dict(name=name, type=msg_type, serialization_format='cdr')
+            # Humble has no topic id argument; newer ROS releases require it.
+            try:
+                metadata = rosbag2_py.TopicMetadata(**fields)
+            except TypeError:
+                metadata = rosbag2_py.TopicMetadata(id=0, **fields)
+            self.writer.create_topic(metadata)
 
     def write(self, topic, message):
         self.writer.write(topic, serialize_message(message), time.time_ns())
@@ -43,5 +48,7 @@ class SessionBag:
 
     def close(self):
         if self.writer is not None:
-            self.writer.close()
+            # Humble finalizes the bag when the writer is destroyed.
+            if hasattr(self.writer, 'close'):
+                self.writer.close()
             self.writer = None

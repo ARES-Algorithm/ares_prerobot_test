@@ -5,10 +5,10 @@ chassis_controller:
     lease_seconds: 1.5
     angular_accel: 0.5
     angular_jerk: 2.0
-    max_linear_speed: 0.2
-    max_angular_speed: 0.3
-    max_linear_accel: 0.5
-    max_linear_jerk: 2.0
+    max_linear_speed: 2000.0
+    max_angular_speed: 3000.0
+    max_linear_accel: 5000.0
+    max_linear_jerk: 20000.0
     wheel_radius: 0.04
     wheel_rpm_ratio: 1.0
     bag_directory: recordings
