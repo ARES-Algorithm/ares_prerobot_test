@@ -40,7 +40,10 @@ async function refresh() {
     $('usb-state').textContent = state.usb_ready ? '已连接' : '未就绪';
     $('tx-state').textContent = state.transmitting ? '正在发送' : '未发送';
     $('mode-state').textContent = ({idle:'待命',tracking:'跟踪目标',stopping:'减速中',
-      halting:'零目标',control_lost:'控制端失联',usb_lost:'USB 失联'})[state.mode] || state.mode;
+      halting:'零目标',control_lost:'控制端失联',usb_lost:'USB 失联',
+      recording_error:'录包失败，已停止发送'})[state.mode] || state.mode;
+    $('recording-state').textContent = state.recording ? '正在录制' : '未录制';
+    $('recording-path').textContent = state.recording_path ? `保存位置：${state.recording_path}` : '';
     $('target-vector').textContent = vector(state.target);
     $('command-vector').textContent = vector(state.command);
     $('sent-vector').textContent = vector(state.sent);

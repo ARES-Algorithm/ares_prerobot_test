@@ -6,7 +6,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    config = get_package_share_directory('ares_prerobot_test') + '/config/default.yaml'
+    config = get_package_share_directory('ares_prerobot_test') + '/config/control.yaml'
     return LaunchDescription([
         DeclareLaunchArgument('config', default_value=config),
         Node(package='ares_test_bridge', executable='chassis_bridge',

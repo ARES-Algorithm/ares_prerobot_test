@@ -5,6 +5,8 @@
 
 # Experiment recordings and generated reports
 /results/
+/recordings/*
+!/recordings/.gitkeep
 *.bag
 *.db3
 *.db3-shm

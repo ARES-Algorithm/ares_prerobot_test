@@ -6,6 +6,7 @@
   <title>ARES · 底盘控制</title>
   <link rel="stylesheet" href="/app.css">
   <script src="/app.js" defer></script>
+  <script src="/charts.js" defer></script>
 </head>
 <body>
   <main class="shell">
@@ -19,11 +20,11 @@
         <div class="panel-head"><div><p class="eyebrow">CONTROL</p><h2 id="control-title">运动指令</h2></div><span id="owner" class="pill">未取得控制权</span></div>
         <form id="command-form">
           <div class="fields">
-            <label>Vx <span>m/s</span><input name="vx" type="number" step="any" value="0.3" required></label>
+            <label>Vx <span>m/s</span><input name="vx" type="number" step="any" value="0.1" required></label>
             <label>Vy <span>m/s</span><input name="vy" type="number" step="any" value="0" required></label>
             <label>Wz <span>rad/s</span><input name="wz" type="number" step="any" value="0" required></label>
-            <label>Amax <span>m/s²</span><input name="amax" type="number" step="any" min="0.001" value="1" required></label>
-            <label>Jerkmax <span>m/s³</span><input name="jerkmax" type="number" step="any" min="0.001" value="2" required></label>
+            <label>Amax <span>m/s²</span><input name="amax" type="number" step="any" min="0.001" value="0.3" required></label>
+            <label>Jerkmax <span>m/s³</span><input name="jerkmax" type="number" step="any" min="0.001" value="1" required></label>
           </div>
           <div class="actions"><button id="claim" type="button" class="secondary">取得控制权</button><button id="send" type="submit" class="primary" disabled>发送目标</button></div>
         </form>
@@ -36,6 +37,8 @@
           <div class="state-row"><span>USB 桥</span><strong id="usb-state">未知</strong></div>
           <div class="state-row"><span>发送状态</span><strong id="tx-state">待命</strong></div>
           <div class="state-row"><span>控制模式</span><strong id="mode-state">—</strong></div>
+          <div class="state-row"><span>本轮录包</span><strong id="recording-state">待命</strong></div>
+          <p id="recording-path" class="caption" aria-live="polite"></p>
         </section>
         <section class="panel" aria-labelledby="velocity-title"><div class="panel-head"><div><p class="eyebrow">VELOCITY</p><h2 id="velocity-title">速度向量</h2></div></div>
           <div class="vector"><span>目标</span><code id="target-vector">0.000 · 0.000 · 0.000</code></div>
@@ -44,6 +47,25 @@
           <p class="caption">顺序：Vx · Vy · Wz。断联后“最近发送”保留最后一帧数值，不表示仍在发送。</p>
         </section>
       </aside>
+      <div class="chart-stack">
+        <section class="panel chart-panel" aria-labelledby="motion-title">
+          <div class="panel-head"><div><p class="eyebrow">LIVE MOTION</p><h2 id="motion-title">速度 / 加速度 / Jerk</h2></div><span id="telemetry-state" class="pill">等待遥测</span></div>
+          <div class="chart-tools"><label>观测轮组 <select id="wheel-select"><option value="0">FL 左前</option><option value="1">FR 右前</option><option value="2">RR 右后</option><option value="3">RL 左后</option></select></label><span>最近 30 秒 · 每条曲线独立量程</span></div>
+          <div class="plot-wrap"><canvas id="motion-chart" role="img" aria-label="实时 v、a、j 指令与所选驱动轮测量曲线"></canvas></div>
+          <div class="plot-legend"><span class="legend-v">v 指令 / 实测</span><span class="legend-a">a 指令 / 实测</span><span class="legend-j">j 指令 / 实测</span><span>实线为指令，虚线为实测</span></div>
+          <p class="caption">实测 v 为所选驱动轮轮缘速度的模；a、j 由转速按采样时间拟合。轮缘速度可能受打滑影响，不等同于地速。</p>
+        </section>
+        <section class="panel chart-panel" aria-labelledby="current-title">
+          <div class="panel-head"><div><p class="eyebrow">LIVE CURRENT</p><h2 id="current-title">电机电流</h2></div><span class="pill">所选轮组</span></div>
+          <h3 class="current-subtitle">所选轮组</h3>
+          <div class="plot-wrap current-plot"><canvas id="current-chart" role="img" aria-label="实时 Is 转向电流和 Id 驱动电流曲线"></canvas></div>
+          <div class="plot-legend"><span class="legend-is">Is 转向电流 (A)</span><span class="legend-id">Id 驱动电流 (A)</span></div>
+          <h3 class="current-subtitle mean-subtitle">四组电流平均值</h3>
+          <div class="plot-wrap current-plot"><canvas id="current-mean-chart" role="img" aria-label="实时四组转向电流 Is 平均值和四组驱动电流 Id 平均值曲线"></canvas></div>
+          <div class="plot-legend"><span class="legend-is">Is 平均值 (A)</span><span class="legend-id">Id 平均值 (A)</span></div>
+          <p class="caption">电流来自下位机 0x0141 遥测；现有 VESC 负电流换算尚待校准。</p>
+        </section>
+      </div>
     </div>
     <section class="panel events-panel" aria-labelledby="events-title"><div class="panel-head"><div><p class="eyebrow">EVENTS</p><h2 id="events-title">最近事件</h2></div></div><ol id="events"></ol></section>
     <footer>ARES · 本地控制界面 · 失联时停止发送，不自动发送零速度</footer>
