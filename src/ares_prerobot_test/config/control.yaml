@@ -11,6 +11,7 @@ chassis_controller:
     max_linear_jerk: 2.0
     wheel_radius: 0.04
     wheel_rpm_ratio: 1.0
+    bag_directory: recordings
 
 chassis_bridge:
   ros__parameters:

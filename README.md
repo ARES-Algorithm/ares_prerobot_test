@@ -22,6 +22,8 @@ ros2 launch ares_prerobot_test control.launch.py
 
 页面需先取得控制权，且 USB 桥接就绪后才接受运动目标；控制权租约失效或 USB 断开时停止发送指令。
 
+网页控制每次首次“发送目标”前会在当前工作区的 `recordings/` 下创建一个 rosbag；后续调整目标仍写入同一个包。点击“立即零目标”后，控制器写入 5 帧零指令，并在约 0.2 秒后关闭本轮 rosbag；链路失联、释放控制或关闭控制器也会保存已录到的数据。启动 launch 时请先 `cd` 到项目根目录，或用 `bag_directory` 参数指定绝对目录。包内有 `/prerobot/cmd_vel`、`/prerobot/sent_cmd`、`/prerobot/usb_rx` 原始话题，以及 JSON 格式的 `/prerobot/chart_command`（指令 v/a/j）、`/prerobot/chart_wheel`（四轮 RPM 与 v/a/j）、`/prerobot/chart_current`（四轮 Id/Is 和平均值）。页面“本轮录包”会显示录制状态与保存路径。
+
 ROS2 Jazzy 底盘实测工作区。包含 C++ USB 桥接、Python 单次实验状态机、CSV 原始采集、rosbag 录制和离线分析。默认运行模拟底盘，启动 launch 后调用服务才开始实验。
 
 ## 构建与首次运行

@@ -75,13 +75,15 @@ class LiveTelemetry:
             speed = math.hypot(vx, vy)
             fit = self.command_fit.add(now, speed)
             self.sequence += 1
-            self.commands.append(dict(id=self.sequence, received=now, t=now, v=speed,
-                                      derived=fit))
+            sample = dict(id=self.sequence, received=now, t=now, v=speed, derived=fit)
+            self.commands.append(sample)
             self.last_command = now
+            return sample
 
     def raw(self, data_id, values):
         now = self.clock()
         with self.lock:
+            result = None
             if data_id == 0x0131:
                 # chassis_speed_test: seq, uptime(sec/usec), 4 drive RPM, 4 steering RPM.
                 if len(values) != 11:
@@ -112,14 +114,19 @@ class LiveTelemetry:
                 self.last_uptime, self.last_sequence = uptime, seq
                 self.last_sensor = now
                 self.error = None
+                wheel_samples = []
                 for i, rpm in enumerate(values[3:7]):
                     self.sequence += 1
                     # Convert motor RPM to wheel-rim speed; the sign is irrelevant to speed magnitude.
                     v = abs(float(rpm)) * 2 * math.pi * self.radius / (60 * self.rpm_ratio)
                     derived = self.fit[i].add(stamp, v)
-                    self.wheels[i].append(dict(id=self.sequence, received=now, t=stamp,
-                                               seq=int(seq), rpm=float(rpm) if math.isfinite(rpm) else None,
-                                               v=v if math.isfinite(v) else None, derived=derived))
+                    sample = dict(id=self.sequence, received=now, t=stamp,
+                                  seq=int(seq), wheel=i,
+                                  rpm=float(rpm) if math.isfinite(rpm) else None,
+                                  v=v if math.isfinite(v) else None, derived=derived)
+                    self.wheels[i].append(sample)
+                    wheel_samples.append(sample)
+                result = ('wheel', wheel_samples)
             elif data_id == 0x0141:
                 # seq, uptime seconds, 4 drive currents (Id), 4 steering currents (Is).
                 if len(values) != 10 or not self.finite(values[:2]):
@@ -130,10 +137,15 @@ class LiveTelemetry:
                 if self.currents and self.currents[-1]['seq'] == int(seq):
                     return
                 self.sequence += 1
-                self.currents.append(dict(id=self.sequence, received=now, t=now, seq=int(seq),
-                    Id=[float(v) if math.isfinite(v) else None for v in values[2:6]],
-                    Is=[float(v) if math.isfinite(v) else None for v in values[6:10]]))
+                sample = dict(id=self.sequence, received=now, t=now, seq=int(seq),
+                              Id=[float(v) if math.isfinite(v) else None for v in values[2:6]],
+                              Is=[float(v) if math.isfinite(v) else None for v in values[6:10]])
+                sample['Id_mean'] = sum(sample['Id']) / 4 if all(v is not None for v in sample['Id']) else None
+                sample['Is_mean'] = sum(sample['Is']) / 4 if all(v is not None for v in sample['Is']) else None
+                self.currents.append(sample)
+                result = ('current', sample)
             self.trim(now)
+            return result
 
     def reset_sensor(self):
         for rows, fit in zip(self.wheels, self.fit):
